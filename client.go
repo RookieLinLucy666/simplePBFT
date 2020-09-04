@@ -5,28 +5,27 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"math/rand"
 	"net"
 	"sync"
 	"time"
 )
 
 type Client struct {
-	nodeId		int
-	url 		string
-	keypair		Keypair
-	knownNodes	[]*KnownNode
-	request 	*RequestMsg
-	replyLog	map[int]*ReplyMsg
-	mutex		sync.Mutex
+	nodeID     int
+	url        string
+	keypair    Keypair
+	knownNodes []*KnownNode
+	request    *RequestMsg
+	replyLog   map[int]*ReplyMsg
+	mutex      sync.Mutex
 }
 
-func NewClient() *Client{
-	client :=  &Client{
+func NewClient() *Client {
+	client := &Client{
 		ClientNode.nodeID,
 		ClientNode.url,
 		KeypairMap[ClientNode.nodeID],
-		KnownNodes,
+		KnownAllNodes,
 		nil,
 		make(map[int]*ReplyMsg),
 		sync.Mutex{},
@@ -34,8 +33,9 @@ func NewClient() *Client{
 	return client
 }
 
-func (c *Client) Start(){
+func (c *Client) Start() {
 	c.sendRequest()
+
 	ln, err := net.Listen("tcp", c.url)
 	if err != nil {
 		panic(err)
@@ -50,19 +50,23 @@ func (c *Client) Start(){
 	}
 }
 
-func (c *Client) handleConnection(conn net.Conn){
+func (c *Client) handleConnection(conn net.Conn) {
 	req, err := ioutil.ReadAll(conn)
-	header, payload, _:= SplitMsg(req)
+	header, payload, _ := SplitMsg(req)
 	if err != nil {
 		panic(err)
 	}
 	switch header {
-	case hReply:
-		c.handleReply(payload)
-	}}
+	case hGovReply:
+		c.handleGovReply(payload)
+	case hNorReply:
+		c.handleNorReply(payload)
+	}
+}
 
 func (c *Client) sendRequest() {
-	msg := fmt.Sprintf("%d work to do!",rand.Int())
+	// msg := fmt.Sprintf("%d work to do!", rand.Int())
+	msg := ReadFileString()
 	req := Request{
 		msg,
 		hex.EncodeToString(generateDigest(msg)),
@@ -70,11 +74,11 @@ func (c *Client) sendRequest() {
 	reqmsg := &RequestMsg{
 		"solve",
 		int(time.Now().Unix()),
-		c.nodeId,
+		c.nodeID,
 		req,
 	}
 	sig, err := c.signMessage(reqmsg)
-	if err != nil{
+	if err != nil {
 		fmt.Printf("%v\n", err)
 	}
 	logBroadcastMsg(hRequest, reqmsg)
@@ -82,34 +86,55 @@ func (c *Client) sendRequest() {
 	c.request = reqmsg
 }
 
-func (c *Client) handleReply(payload []byte) {
+func (c *Client) handleGovReply(payload []byte) {
 	var replyMsg ReplyMsg
-	err := json.Unmarshal(payload,&replyMsg)
+	err := json.Unmarshal(payload, &replyMsg)
 	if err != nil {
 		fmt.Printf("error happened:%v", err)
 		return
 	}
-	logHandleMsg(hReply, replyMsg, replyMsg.NodeID)
+	logHandleMsg(hGovReply, replyMsg, replyMsg.NodeID)
 	c.mutex.Lock()
 	c.replyLog[replyMsg.NodeID] = &replyMsg
 	rlen := len(c.replyLog)
 	c.mutex.Unlock()
-	if rlen >= c.countNeedReceiveMsgAmount(){
-		fmt.Println("request success!!")
+	if rlen >= c.countGovNeedReceiveMsgAmount() {
+		fmt.Println("gov:request success!!")
+		PrintMemUsage()
+		fmt.Println("end nano time:", time.Now().UnixNano())
 	}
 }
 
-func (c *Client) signMessage(msg interface{}) ([]byte, error){
+func (c *Client) handleNorReply(payload []byte) {
+	var replyMsg ReplyMsg
+	err := json.Unmarshal(payload, &replyMsg)
+	if err != nil {
+		fmt.Printf("error happened:%v", err)
+		return
+	}
+	logHandleMsg(hNorReply, replyMsg, replyMsg.NodeID)
+	c.mutex.Lock()
+	c.replyLog[replyMsg.NodeID] = &replyMsg
+	rlen := len(c.replyLog)
+	c.mutex.Unlock()
+	if rlen >= c.countNorNeedReceiveMsgAmount() {
+		fmt.Println("nor:request success!!")
+		PrintMemUsage()
+		fmt.Println("end nano time:", time.Now().UnixNano())
+	}
+}
+
+func (c *Client) signMessage(msg interface{}) ([]byte, error) {
 	sig, err := signMessage(msg, c.keypair.privkey)
-	if err != nil{
+	if err != nil {
 		return nil, err
 	}
 	return sig, nil
 }
 
-func (c *Client) findPrimaryNode() *KnownNode{
-	 nodeId := ViewID % len(c.knownNodes)
-	for _, knownNode := range c.knownNodes{
+func (c *Client) findPrimaryNode() *KnownNode {
+	nodeId := ViewID%len(c.knownNodes) + 4
+	for _, knownNode := range c.knownNodes {
 		if knownNode.nodeID == nodeId {
 			return knownNode
 		}
@@ -117,13 +142,12 @@ func (c *Client) findPrimaryNode() *KnownNode{
 	return nil
 }
 
-func (c *Client) countTolerateFaultNode() int {
-	return (len(c.knownNodes) - 1) / 3
+func (c *Client) countGovNeedReceiveMsgAmount() int {
+	f := (len(KnownGovNodes) - 1) / 3
+	return f + 1
 }
 
-func (c *Client) countNeedReceiveMsgAmount() int {
-	f := c.countTolerateFaultNode()
-	return f+1
+func (c *Client) countNorNeedReceiveMsgAmount() int {
+	f := (len(KnownNorNodes) - 1) / 3
+	return f + 1
 }
-
-
