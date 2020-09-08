@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"net"
 	"sync"
 	"time"
@@ -65,8 +66,8 @@ func (c *Client) handleConnection(conn net.Conn) {
 }
 
 func (c *Client) sendRequest() {
-	// msg := fmt.Sprintf("%d work to do!", rand.Int())
-	msg := ReadFileString()
+	msg := fmt.Sprintf("%d work to do!", rand.Int())
+	// msg := ReadFileString()
 	req := Request{
 		msg,
 		hex.EncodeToString(generateDigest(msg)),

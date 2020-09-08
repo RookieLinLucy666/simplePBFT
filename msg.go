@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+
+	"golang.org/x/crypto/bn256"
 )
 
 const headerLength = 12
@@ -54,6 +56,8 @@ type PrePrepareMsg struct {
 	Digest     string     `json:"digest"`
 	ViewID     int        `json:"viewID"`
 	SequenceID int        `json:"sequenceID"`
+	BlsSig     []byte     `json:"blsSig"`
+	BlsPK      []byte     `json:"blsPK"`
 }
 
 func (msg PrePrepareMsg) String() string {
@@ -67,6 +71,8 @@ type PrepareGovMsg struct {
 	ViewID     int    `json:"viewID"`
 	SequenceID int    `json:"sequenceID"`
 	NodeID     int    `json:"nodeid"`
+	BlsSig     []byte `json:"blsSig"`
+	BlsPK      []byte `json:"blsPK"`
 }
 
 func (msg PrepareGovMsg) String() string {
@@ -76,10 +82,12 @@ func (msg PrepareGovMsg) String() string {
 
 //<COMMIT, v, n, d, i>
 type CommitGovMsg struct {
-	Digest     string `json:"digest"`
-	ViewID     int    `json:"viewID"`
-	SequenceID int    `json:"sequenceID"`
-	NodeID     int    `json:"nodeid"`
+	Digest     string    `json:"digest"`
+	ViewID     int       `json:"viewID"`
+	SequenceID int       `json:"sequenceID"`
+	NodeID     int       `json:"nodeid"`
+	BlsSig     *bn256.G1 `json:"blsSig"`
+	BlsPK      *bn256.G2 `json:"blsPK"`
 }
 
 func (msg CommitGovMsg) String() string {
@@ -89,10 +97,12 @@ func (msg CommitGovMsg) String() string {
 
 //<PREPARE, v, n, d, i>
 type PrepareNorMsg struct {
-	Digest     string `json:"digest"`
-	ViewID     int    `json:"viewID"`
-	SequenceID int    `json:"sequenceID"`
-	NodeID     int    `json:"nodeid"`
+	Digest     string    `json:"digest"`
+	ViewID     int       `json:"viewID"`
+	SequenceID int       `json:"sequenceID"`
+	NodeID     int       `json:"nodeid"`
+	BlsSig     *bn256.G1 `json:"blsSig"`
+	BlsPK      *bn256.G2 `json:"blsPK"`
 }
 
 func (msg PrepareNorMsg) String() string {
@@ -102,10 +112,12 @@ func (msg PrepareNorMsg) String() string {
 
 //<COMMIT, v, n, d, i>
 type CommitNorMsg struct {
-	Digest     string `json:"digest"`
-	ViewID     int    `json:"viewID"`
-	SequenceID int    `json:"sequenceID"`
-	NodeID     int    `json:"nodeid"`
+	Digest     string    `json:"digest"`
+	ViewID     int       `json:"viewID"`
+	SequenceID int       `json:"sequenceID"`
+	NodeID     int       `json:"nodeid"`
+	BlsSig     *bn256.G1 `json:"blsSig"`
+	BlsPK      *bn256.G2 `json:"blsPK"`
 }
 
 func (msg CommitNorMsg) String() string {
