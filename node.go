@@ -238,7 +238,15 @@ func (node *Node) handlePrePrepare(payload []byte, sig []byte) {
 	node.mutex.Unlock()
 	var sendMsg []byte
 	if node.NodeID <= 3 {
-		blssig := Sign(node.nodeSK, prePrepareMsg.String())
+		node.blslog.msgs = append(node.blslog.msgs, prePrepareMsg.Request.String())
+		blssig, _ := new(bn256.G1).Unmarshal(prePrepareMsg.BlsSig)
+		node.blslog.sigs = append(node.blslog.sigs, blssig)
+		nodepk, _ := new(bn256.G2).Unmarshal(prePrepareMsg.BlsPK)
+		node.blslog.pks = append(node.blslog.pks, nodepk)
+		fmt.Println("handle preprepare")
+		fmt.Println(Verify(nodepk, prePrepareMsg.Request.String(), blssig))
+
+		blssig = Sign(node.nodeSK, prePrepareMsg.Digest)
 		prepareMsg := PrepareGovMsg{
 			prePrepareMsg.Digest,
 			ViewID,
@@ -254,11 +262,7 @@ func (node *Node) handlePrePrepare(payload []byte, sig []byte) {
 			return
 		}
 		sendMsg = ComposeMsg(hGovPrepare, prepareMsg, msgSig)
-		node.blslog.msgs = append(node.blslog.msgs, prePrepareMsg.Digest)
-		blssig, _ = new(bn256.G1).Unmarshal(prePrepareMsg.BlsSig)
-		node.blslog.sigs = append(node.blslog.sigs, blssig)
-		nodepk, _ := new(bn256.G2).Unmarshal(prePrepareMsg.BlsPK)
-		node.blslog.pks = append(node.blslog.pks, nodepk)
+
 		node.mutex.Lock()
 		// put prepare msg into log
 		if node.msgLog.prepareLog[prepareMsg.Digest] == nil {
@@ -361,50 +365,21 @@ func (node *Node) handleGovPrepare(payload []byte, sig []byte) {
 			fmt.Println("aggregate signature failed")
 		} else {
 			fmt.Println("aggregate success")
-			logBroadcastMsg(hGovPrepare, prepareMsg)
-			send(ComposeMsg(hGovPrepare, prepareMsg, []byte{}), node.clientNode.url)
+			node.mutex.Lock()
+			requestMsg := node.requestPool[prepareMsg.Digest]
+			node.mutex.Unlock()
+			done := "operation:" + requestMsg.Operation + ",message:" + requestMsg.CliRequest.Message
+			replyMsg := ReplyMsg{
+				node.View,
+				int(time.Now().Unix()),
+				requestMsg.ClientID,
+				node.NodeID,
+				done,
+			}
+			logBroadcastMsg(hGovReply, replyMsg)
+			send(ComposeMsg(hGovReply, replyMsg, []byte{}), node.clientNode.url)
 		}
 	}
-
-	// if receive prepare msg >= 2f +1, then broadcast commit msg
-	// limit := node.countNeedReceiveMsgAmount()
-	// sum, err := node.findVerifiedPrepareMsgCount(prepareMsg.Digest)
-	// if err != nil {
-	// 	fmt.Printf("error happened:%v", err)
-	// 	return
-	// }
-	// if sum >= limit {
-	// 	// if already send commit msg, then do nothing
-	// 	node.mutex.Lock()
-	// 	exist, _ := node.msgLog.commitLog[prepareMsg.Digest][node.NodeID]
-	// 	node.mutex.Unlock()
-	// 	if exist != false {
-	// 		return
-	// 	}
-	// 	//send commit msg
-	// 	commitMsg := CommitGovMsg{
-	// 		prepareMsg.Digest,
-	// 		prepareMsg.ViewID,
-	// 		prepareMsg.SequenceID,
-	// 		node.NodeID,
-	// 		nil,
-	// 		nil,
-	// 	}
-	// 	sig, err := node.signMessage(commitMsg)
-	// 	if err != nil {
-	// 		fmt.Printf("sign message happened error:%v\n", err)
-	// 	}
-	// 	sendMsg := ComposeMsg(hGovCommit, commitMsg, sig)
-	// 	// put commit msg to log
-	// 	node.mutex.Lock()
-	// 	if node.msgLog.commitLog[commitMsg.Digest] == nil {
-	// 		node.msgLog.commitLog[commitMsg.Digest] = make(map[int]bool)
-	// 	}
-	// 	node.msgLog.commitLog[commitMsg.Digest][node.NodeID] = true
-	// 	node.mutex.Unlock()
-	// 	logBroadcastMsg(hGovCommit, commitMsg)
-	// 	node.broadcast(sendMsg)
-	// }
 }
 
 func (node *Node) handleNorPrepare(payload []byte, sig []byte) {
@@ -485,13 +460,13 @@ func (node *Node) handleNorPrepare(payload []byte, sig []byte) {
 	}
 }
 
-// func (node *Node) handleGovCommit(payload []byte, sig []byte) {
-// 	var commitMsg CommitGovMsg
+// func (node *Node) handleNorCommit(payload []byte, sig []byte) {
+// 	var commitMsg CommitNorMsg
 // 	err := json.Unmarshal(payload, &commitMsg)
 // 	if err != nil {
 // 		fmt.Printf("error happened:%v", err)
 // 	}
-// 	logHandleMsg(hGovCommit, commitMsg, commitMsg.NodeID)
+// 	logHandleMsg(hNorCommit, commitMsg, commitMsg.NodeID)
 // 	//verify commitMsg's signature
 // 	msgPubKey := node.findNodePubkey(commitMsg.NodeID)
 // 	verify, err := verifySignatrue(commitMsg, sig, msgPubKey)
@@ -546,82 +521,13 @@ func (node *Node) handleNorPrepare(payload []byte, sig []byte) {
 // 			node.NodeID,
 // 			done,
 // 		}
-// 		logBroadcastMsg(hGovReply, replyMsg)
-// 		send(ComposeMsg(hGovReply, replyMsg, []byte{}), node.clientNode.url)
+// 		logBroadcastMsg(hNorReply, replyMsg)
+// 		send(ComposeMsg(hNorReply, replyMsg, []byte{}), node.clientNode.url)
 // 		node.mutex.Lock()
 // 		node.msgLog.replyLog[commitMsg.Digest] = true
 // 		node.mutex.Unlock()
 // 	}
 // }
-
-func (node *Node) handleNorCommit(payload []byte, sig []byte) {
-	var commitMsg CommitNorMsg
-	err := json.Unmarshal(payload, &commitMsg)
-	if err != nil {
-		fmt.Printf("error happened:%v", err)
-	}
-	logHandleMsg(hNorCommit, commitMsg, commitMsg.NodeID)
-	//verify commitMsg's signature
-	msgPubKey := node.findNodePubkey(commitMsg.NodeID)
-	verify, err := verifySignatrue(commitMsg, sig, msgPubKey)
-	if err != nil {
-		fmt.Printf("verify signature failed:%v\n", err)
-		return
-	}
-	if verify == false {
-		fmt.Printf("verify signature failed\n")
-		return
-	}
-	// verify request's digest
-	err = node.verifyRequestDigest(commitMsg.Digest)
-	if err != nil {
-		fmt.Printf("%v\n", err)
-		return
-	}
-	// put commitMsg into log
-	node.mutex.Lock()
-	if node.msgLog.commitLog[commitMsg.Digest] == nil {
-		node.msgLog.commitLog[commitMsg.Digest] = make(map[int]bool)
-	}
-	node.msgLog.commitLog[commitMsg.Digest][commitMsg.NodeID] = true
-	node.mutex.Unlock()
-	// if receive commit msg >= 2f +1, then send reply msg to client
-	limit := node.countNeedReceiveMsgAmount()
-	sum, err := node.findVerifiedCommitMsgCount(commitMsg.Digest)
-	if err != nil {
-		fmt.Printf("error happened:%v", err)
-		return
-	}
-	if sum >= limit {
-		// if already send reply msg, then do nothing
-		node.mutex.Lock()
-		exist := node.msgLog.replyLog[commitMsg.Digest]
-		node.mutex.Unlock()
-		if exist == true {
-			return
-		}
-		// send reply msg
-		node.mutex.Lock()
-		requestMsg := node.requestPool[commitMsg.Digest]
-		node.mutex.Unlock()
-		// fmt.Printf("operstion:%s  message:%s executed... \n",requestMsg.Operation, requestMsg.CRequest.Message)
-		// done := fmt.Sprintf("operstion:%s  message:%s done ",requestMsg.Operation, requestMsg.CRequest.Message)
-		fmt.Printf("operation:%s  message: executed... \n", requestMsg.Operation)
-		done := "operation:" + requestMsg.Operation + ",message:" + requestMsg.CliRequest.Message
-		replyMsg := ReplyMsg{
-			node.View,
-			int(time.Now().Unix()),
-			requestMsg.ClientID,
-			node.NodeID,
-			done,
-		}
-		logBroadcastMsg(hNorReply, replyMsg)
-		send(ComposeMsg(hNorReply, replyMsg, []byte{}), node.clientNode.url)
-		node.mutex.Lock()
-		node.msgLog.replyLog[commitMsg.Digest] = true
-		node.mutex.Unlock()
-	}
-}
 
 //record the digest of each request
 func (node *Node) verifyRequestDigest(digest string) error {
