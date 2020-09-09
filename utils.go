@@ -73,7 +73,7 @@ func bToMb(b uint64) uint64 {
 }
 
 func ReadFileString() string {
-	b, err := ioutil.ReadFile("test_30MB.txt") // just pass the file name
+	b, err := ioutil.ReadFile("test_20MB.txt") // just pass the file name
 	if err != nil {
 		fmt.Print(err)
 	}

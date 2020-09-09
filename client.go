@@ -5,20 +5,22 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"math/rand"
 	"net"
+	"os"
 	"sync"
 	"time"
 )
 
 type Client struct {
-	nodeID     int
-	url        string
-	keypair    Keypair
-	knownNodes []*KnownNode
-	request    *RequestMsg
-	replyLog   map[int]*ReplyMsg
-	mutex      sync.Mutex
+	nodeID        int
+	url           string
+	keypair       Keypair
+	knownNodes    []*KnownNode
+	request       *RequestMsg
+	replyLog      map[int]*ReplyMsg
+	mutex         sync.Mutex
+	replyGovCount int
+	replyNorCount int
 }
 
 func NewClient() *Client {
@@ -30,6 +32,8 @@ func NewClient() *Client {
 		nil,
 		make(map[int]*ReplyMsg),
 		sync.Mutex{},
+		0,
+		0,
 	}
 	return client
 }
@@ -58,16 +62,14 @@ func (c *Client) handleConnection(conn net.Conn) {
 		panic(err)
 	}
 	switch header {
-	case hGovReply:
-		c.handleGovReply(payload)
-	case hNorReply:
-		c.handleNorReply(payload)
+	case hGovReply, hNorReply:
+		c.handleReply(payload)
 	}
 }
 
 func (c *Client) sendRequest() {
-	msg := fmt.Sprintf("%d work to do!", rand.Int())
-	// msg := ReadFileString()
+	// msg := fmt.Sprintf("%d work to do!", rand.Int())
+	msg := ReadFileString()
 	req := Request{
 		msg,
 		hex.EncodeToString(generateDigest(msg)),
@@ -87,41 +89,26 @@ func (c *Client) sendRequest() {
 	c.request = reqmsg
 }
 
-func (c *Client) handleGovReply(payload []byte) {
+func (c *Client) handleReply(payload []byte) {
 	var replyMsg ReplyMsg
 	err := json.Unmarshal(payload, &replyMsg)
 	if err != nil {
 		fmt.Printf("error happened:%v", err)
 		return
 	}
-	logHandleMsg(hGovReply, replyMsg, replyMsg.NodeID)
-	c.mutex.Lock()
-	c.replyLog[replyMsg.NodeID] = &replyMsg
-	rlen := len(c.replyLog)
-	c.mutex.Unlock()
-	if rlen >= c.countGovNeedReceiveMsgAmount() {
-		fmt.Println("gov:request success!!")
+	if replyMsg.Header == "hGovReply" && c.replyGovCount == 0 {
+		c.replyGovCount += 1
+		logHandleMsg(c.nodeID, hGovReply, replyMsg, replyMsg.NodeID)
+	}
+	if replyMsg.Header == "hNorReply" && c.replyNorCount == 0 {
+		c.replyNorCount += 1
+		logHandleMsg(c.nodeID, hNorReply, replyMsg, replyMsg.NodeID)
+	}
+	if (c.replyGovCount + c.replyNorCount) == 2 {
+		fmt.Println("request success end")
 		PrintMemUsage()
 		fmt.Println("end nano time:", time.Now().UnixNano())
-	}
-}
-
-func (c *Client) handleNorReply(payload []byte) {
-	var replyMsg ReplyMsg
-	err := json.Unmarshal(payload, &replyMsg)
-	if err != nil {
-		fmt.Printf("error happened:%v", err)
-		return
-	}
-	logHandleMsg(hNorReply, replyMsg, replyMsg.NodeID)
-	c.mutex.Lock()
-	c.replyLog[replyMsg.NodeID] = &replyMsg
-	rlen := len(c.replyLog)
-	c.mutex.Unlock()
-	if rlen >= c.countNorNeedReceiveMsgAmount() {
-		fmt.Println("nor:request success!!")
-		PrintMemUsage()
-		fmt.Println("end nano time:", time.Now().UnixNano())
+		os.Exit(1)
 	}
 }
 

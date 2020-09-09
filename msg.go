@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
-
-	"golang.org/x/crypto/bn256"
 )
 
 const headerLength = 12
@@ -15,10 +13,7 @@ type HeaderMsg string
 const (
 	hRequest    HeaderMsg = "Request"
 	hPrePrepare HeaderMsg = "PrePrepare"
-	hGovPrepare HeaderMsg = "GovPrepare"
-	hNorPrepare HeaderMsg = "NorPrepare"
-	hGovCommit  HeaderMsg = "GovCommit"
-	hNorCommit  HeaderMsg = "NorCommit"
+	hPrepare    HeaderMsg = "Prepare"
 	hGovReply   HeaderMsg = "GovReply"
 	hNorReply   HeaderMsg = "NorReply"
 )
@@ -66,7 +61,7 @@ func (msg PrePrepareMsg) String() string {
 }
 
 //<PREPARE, v, n, d, i>
-type PrepareGovMsg struct {
+type PrepareMsg struct {
 	Digest     string `json:"digest"`
 	ViewID     int    `json:"viewID"`
 	SequenceID int    `json:"sequenceID"`
@@ -75,58 +70,14 @@ type PrepareGovMsg struct {
 	BlsPK      []byte `json:"blsPK"`
 }
 
-func (msg PrepareGovMsg) String() string {
-	bmsg, _ := json.MarshalIndent(msg, "", "	")
-	return string(bmsg) + "\n"
-}
-
-//<COMMIT, v, n, d, i>
-type CommitGovMsg struct {
-	Digest     string    `json:"digest"`
-	ViewID     int       `json:"viewID"`
-	SequenceID int       `json:"sequenceID"`
-	NodeID     int       `json:"nodeid"`
-	BlsSig     *bn256.G1 `json:"blsSig"`
-	BlsPK      *bn256.G2 `json:"blsPK"`
-}
-
-func (msg CommitGovMsg) String() string {
-	bmsg, _ := json.MarshalIndent(msg, "", "	")
-	return string(bmsg) + "\n"
-}
-
-//<PREPARE, v, n, d, i>
-type PrepareNorMsg struct {
-	Digest     string    `json:"digest"`
-	ViewID     int       `json:"viewID"`
-	SequenceID int       `json:"sequenceID"`
-	NodeID     int       `json:"nodeid"`
-	BlsSig     *bn256.G1 `json:"blsSig"`
-	BlsPK      *bn256.G2 `json:"blsPK"`
-}
-
-func (msg PrepareNorMsg) String() string {
-	bmsg, _ := json.MarshalIndent(msg, "", "	")
-	return string(bmsg) + "\n"
-}
-
-//<COMMIT, v, n, d, i>
-type CommitNorMsg struct {
-	Digest     string    `json:"digest"`
-	ViewID     int       `json:"viewID"`
-	SequenceID int       `json:"sequenceID"`
-	NodeID     int       `json:"nodeid"`
-	BlsSig     *bn256.G1 `json:"blsSig"`
-	BlsPK      *bn256.G2 `json:"blsPK"`
-}
-
-func (msg CommitNorMsg) String() string {
+func (msg PrepareMsg) String() string {
 	bmsg, _ := json.MarshalIndent(msg, "", "	")
 	return string(bmsg) + "\n"
 }
 
 //<REPLY, v, t, c, i, r>
 type ReplyMsg struct {
+	Header    string `json:"header"`
 	ViewID    int    `json:"viewID"`
 	Timestamp int    `json:"timestamp"`
 	ClientID  int    `json:"clientID"`
@@ -185,7 +136,7 @@ func SplitMsg(bmsg []byte) (HeaderMsg, []byte, []byte) {
 	header = HeaderMsg(hhbyte)
 	switch header {
 	// case hRequest, hPrePrepare, hPrepare, hCommit:
-	case hRequest, hPrePrepare, hGovPrepare, hGovCommit, hNorPrepare, hNorCommit:
+	case hRequest, hPrePrepare, hPrepare:
 		payload = bmsg[headerLength : len(bmsg)-256]
 		signature = bmsg[len(bmsg)-256:]
 	case hGovReply, hNorReply:
@@ -199,8 +150,8 @@ func printMsgLog(msg Msg) {
 	fmt.Println(msg.String())
 }
 
-func logHandleMsg(header HeaderMsg, msg Msg, from int) {
-	fmt.Printf("Receive %s msg from localhost:%d\n", header, nodeIdToPort(from))
+func logHandleMsg(to int, header HeaderMsg, msg Msg, from int) {
+	fmt.Printf("node %d Receive %s msg from localhost:%d\n", to, header, nodeIdToPort(from))
 	// printMsgLog(msg)
 }
 
