@@ -21,7 +21,6 @@ var privateKey8085 *rsa.PrivateKey
 var privateKey8086 *rsa.PrivateKey
 var privateKey8087 *rsa.PrivateKey
 
-var privateKeyClient *rsa.PrivateKey
 var publicKey8080 *rsa.PublicKey
 var publicKey8081 *rsa.PublicKey
 var publicKey8082 *rsa.PublicKey
@@ -32,7 +31,23 @@ var publicKey8085 *rsa.PublicKey
 var publicKey8086 *rsa.PublicKey
 var publicKey8087 *rsa.PublicKey
 
-var publicKeyClient *rsa.PublicKey
+var privateKeyClient8088 *rsa.PrivateKey
+var publicKeyClient8088 *rsa.PublicKey
+var privateKeyClient8089 *rsa.PrivateKey
+var publicKeyClient8089 *rsa.PublicKey
+var privateKeyClient8090 *rsa.PrivateKey
+var publicKeyClient8090 *rsa.PublicKey
+var privateKeyClient8091 *rsa.PrivateKey
+var publicKeyClient8091 *rsa.PublicKey
+var privateKeyClient8092 *rsa.PrivateKey
+var publicKeyClient8092 *rsa.PublicKey
+var privateKeyClient8093 *rsa.PrivateKey
+var publicKeyClient8093 *rsa.PublicKey
+var privateKeyClient8094 *rsa.PrivateKey
+var publicKeyClient8094 *rsa.PublicKey
+var privateKeyClient8095 *rsa.PrivateKey
+var publicKeyClient8095 *rsa.PublicKey
+
 var KnownAllNodes []*KnownNode
 var KnownGovNodes []*KnownNode
 var KnownNorNodes []*KnownNode
@@ -76,10 +91,39 @@ func init() {
 		panic(err)
 	}
 
-	privateKeyClient, publicKeyClient, err = getKeyPairByFile(8)
+	privateKeyClient8088, publicKeyClient8088, err = getKeyPairByFile(8)
 	if err != nil {
 		panic(err)
 	}
+	privateKeyClient8089, publicKeyClient8089, err = getKeyPairByFile(9)
+	if err != nil {
+		panic(err)
+	}
+	privateKeyClient8090, publicKeyClient8090, err = getKeyPairByFile(10)
+	if err != nil {
+		panic(err)
+	}
+	privateKeyClient8091, publicKeyClient8091, err = getKeyPairByFile(11)
+	if err != nil {
+		panic(err)
+	}
+	privateKeyClient8092, publicKeyClient8092, err = getKeyPairByFile(12)
+	if err != nil {
+		panic(err)
+	}
+	privateKeyClient8093, publicKeyClient8093, err = getKeyPairByFile(13)
+	if err != nil {
+		panic(err)
+	}
+	privateKeyClient8094, publicKeyClient8094, err = getKeyPairByFile(14)
+	if err != nil {
+		panic(err)
+	}
+	privateKeyClient8095, publicKeyClient8095, err = getKeyPairByFile(15)
+	if err != nil {
+		panic(err)
+	}
+
 	KnownAllNodes = []*KnownNode{
 		{
 			0,
@@ -159,14 +203,42 @@ func init() {
 			publicKey8087,
 		},
 		8: {
-			privateKeyClient,
-			publicKeyClient,
+			privateKeyClient8088,
+			publicKeyClient8088,
+		},
+		9: {
+			privateKeyClient8089,
+			publicKeyClient8089,
+		},
+		10: {
+			privateKeyClient8090,
+			publicKeyClient8090,
+		},
+		11: {
+			privateKeyClient8091,
+			publicKeyClient8091,
+		},
+		12: {
+			privateKeyClient8092,
+			publicKeyClient8092,
+		},
+		13: {
+			privateKeyClient8093,
+			publicKeyClient8093,
+		},
+		14: {
+			privateKeyClient8094,
+			publicKeyClient8094,
+		},
+		15: {
+			privateKeyClient8095,
+			publicKeyClient8095,
 		},
 	}
 	ClientNode = &KnownNode{
 		8,
 		"localhost:8088",
-		publicKeyClient,
+		publicKeyClient8088,
 	}
 }
 
@@ -206,7 +278,7 @@ func generateKeyFiles() {
 		if err != nil {
 			panic(err)
 		}
-		for i := 0; i <= 8; i++ {
+		for i := 0; i < 16; i++ {
 			filename, _ := filepath.Abs(fmt.Sprintf("./Keys/%d", i))
 			if !FileExists(filename+"_priv") && !FileExists(filename+"_pub") {
 				priv, pub := generateKeyPair()

@@ -25,14 +25,27 @@ var (
 			return nil
 		},
 	}
+	clientIdFlag = &cli.IntFlag{
+		Name:     "id",
+		Usage:    "id",
+		Required: true,
+	}
 	clientSubCommand = &cli.Command{
 		Name:        "client",
 		Usage:       "start pbft client",
 		Description: "start pbft client",
-		ArgsUsage:   "",
+		ArgsUsage:   "<id>",
+		Flags: []cli.Flag{
+			clientIdFlag,
+		},
 		Action: func(c *cli.Context) error {
-			client := NewClient()
-			client.Start()
+			clientID := c.Int("id")
+			client := NewClient(clientID)
+			if clientID == 8 {
+				client.Start()
+			} else {
+				println("destination")
+			}
 			return nil
 		},
 	}

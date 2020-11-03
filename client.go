@@ -5,6 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"math/rand"
+
+	//"math/rand", not "crypto/rand"
 	"net"
 	"os"
 	"sync"
@@ -23,7 +26,7 @@ type Client struct {
 	replyNorCount int
 }
 
-func NewClient() *Client {
+func NewClient(clientID int) *Client {
 	client := &Client{
 		ClientNode.nodeID,
 		ClientNode.url,
@@ -68,8 +71,8 @@ func (c *Client) handleConnection(conn net.Conn) {
 }
 
 func (c *Client) sendRequest() {
-	// msg := fmt.Sprintf("%d work to do!", rand.Int())
-	msg := ReadFileString()
+	msg := fmt.Sprintf("%d work to do!", rand.Int())
+	// msg := ReadFileString()
 	req := Request{
 		msg,
 		hex.EncodeToString(generateDigest(msg)),

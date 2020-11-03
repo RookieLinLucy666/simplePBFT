@@ -338,6 +338,7 @@ func (node *Node) handlePrepare(payload []byte, sig []byte) {
 			requestMsg := node.requestPool[prepareMsg.Digest]
 			node.mutex.Unlock()
 			done := "operation:" + requestMsg.Operation + ",message:" + requestMsg.CliRequest.Message
+			//TODO:Add operations of destination clients
 			var result string
 			if node.NodeID <= 3 {
 				result = "hGovReply"
