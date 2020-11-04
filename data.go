@@ -53,6 +53,7 @@ var KnownGovNodes []*KnownNode
 var KnownNorNodes []*KnownNode
 var KeypairMap map[int]Keypair
 var ClientNode *KnownNode
+var DestNode []*KnownNode
 
 func init() {
 	var err error
@@ -239,6 +240,43 @@ func init() {
 		8,
 		"localhost:8088",
 		publicKeyClient8088,
+	}
+	DestNode = []*KnownNode{
+		{
+			9,
+			"localhost:8089",
+			publicKeyClient8089,
+		},
+		{
+			10,
+			"localhost:8090",
+			publicKeyClient8090,
+		},
+		{
+			11,
+			"localhost:8091",
+			publicKeyClient8091,
+		},
+		{
+			12,
+			"localhost:8092",
+			publicKeyClient8092,
+		},
+		{
+			13,
+			"localhost:8093",
+			publicKeyClient8093,
+		},
+		{
+			14,
+			"localhost:8094",
+			publicKeyClient8094,
+		},
+		{
+			15,
+			"localhost:8095",
+			publicKeyClient8095,
+		},
 	}
 }
 

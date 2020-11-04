@@ -41,9 +41,27 @@ func NewClient(clientID int) *Client {
 	return client
 }
 
+func NewDestClient(clientID int) *Client {
+	client := &Client{
+		clientID,
+		DestNode[clientID-9].url,
+		KeypairMap[clientID],
+		KnownAllNodes,
+		nil,
+		make(map[int]*ReplyMsg),
+		sync.Mutex{},
+		0,
+		0,
+	}
+	return client
+}
+
 func (c *Client) Start() {
 	c.sendRequest()
+	c.Receive()
+}
 
+func (c *Client) Receive() {
 	ln, err := net.Listen("tcp", c.url)
 	if err != nil {
 		panic(err)
@@ -76,6 +94,7 @@ func (c *Client) sendRequest() {
 	req := Request{
 		msg,
 		hex.EncodeToString(generateDigest(msg)),
+		"localhost:8089",
 	}
 	reqmsg := &RequestMsg{
 		"solve",

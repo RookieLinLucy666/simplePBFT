@@ -364,6 +364,7 @@ func (node *Node) handlePrepare(payload []byte, sig []byte) {
 				}
 				logBroadcastMsg(hNorReply, replyMsg)
 				send(ComposeMsg(hNorReply, replyMsg, []byte{}), node.clientNode.url)
+				send(ComposeMsg(hNorReply, replyMsg, []byte{}), requestMsg.CliRequest.DestURL)
 			}
 
 		}

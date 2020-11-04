@@ -1,3 +1,11 @@
+/*
+ * @Author: your name
+ * @Date: 2020-11-03 10:46:38
+ * @LastEditTime: 2020-11-04 09:28:47
+ * @LastEditors: Please set LastEditors
+ * @Description: In User Settings Edit
+ * @FilePath: /optimizePBFT/command.go
+ */
 package main
 
 import (
@@ -40,11 +48,12 @@ var (
 		},
 		Action: func(c *cli.Context) error {
 			clientID := c.Int("id")
-			client := NewClient(clientID)
 			if clientID == 8 {
+				client := NewClient(clientID)
 				client.Start()
 			} else {
-				println("destination")
+				client := NewDestClient(clientID)
+				client.Receive()
 			}
 			return nil
 		},

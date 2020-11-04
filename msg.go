@@ -25,6 +25,7 @@ type Msg interface {
 type Request struct {
 	Message string `json:"message"`
 	Digest  string `json:"digest"`
+	DestURL string `json:"desturl"`
 }
 
 func (msg Request) String() string {
